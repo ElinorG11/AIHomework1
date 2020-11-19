@@ -50,8 +50,8 @@ class AStar(BestFirstSearch):
         Notice: You may use `search_node.g_cost`, `self.heuristic_weight`, and `self.heuristic_function`.
         """
 
-        return ((1 - self.heuristic_weight) * search_node.g_cost) \
-               + (self.heuristic_weight * self.heuristic_function(search_node))
+        return ((1 - self.heuristic_weight) * search_node.g_cost) +\
+               (self.heuristic_weight * self.heuristic_function_type.estimate(self,state=search_node.state))
 
     def _open_successor_node(self, problem: GraphProblem, successor_node: SearchNode):
         """
@@ -78,19 +78,22 @@ class AStar(BestFirstSearch):
             if new_g < old_node.g_cost:
                 old_node.g_cost = new_g
                 old_node.parent_search_node = successor_node
-                old_node.expanding_priority = old_node.g_cost + self.heuristic_weight
-            else: #State not in open
+                old_node.expanding_priority = old_node.g_cost + self.heuristic_function_type.estimate(old_node.state)
+            else:  # state not in open
                 if self.close.has_state(successor_node.state):
                     old_node = successor_node
                     if new_g < old_node.g_cost:
                         old_node.g_cost = new_g
                         old_node.parent_search_node = successor_node
-                        old_node.expanding_priority = old_node.g_cost + self.heuristic_weight
+                        old_node.expanding_priority = old_node.g_cost + self.heuristic_function_type.estimate(
+                            old_node.state)
                         self.close.remove_node(old_node)
                         self.open.push_node(old_node)
                     # else do nothing
-                else: # this is a new state - create new node
-                    new_node = SearchNode()
+                else:  # this is a new state - create new node
+                    new_node = SearchNode(successor_node.state, successor_node.parent_search_node, successor_node.cost,
+                                          successor_node.operator_name, successor_node.expanding_priority)
+                    self.open.push_node(new_node)
 
                     """
             if self.open.has_state(successor_node.state):
@@ -101,8 +104,3 @@ class AStar(BestFirstSearch):
             if not self.open.has_state(successor_node.state):
                 self.open.push_node(successor_node)
                     """
-
-
-
-
-
