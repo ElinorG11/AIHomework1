@@ -51,7 +51,7 @@ class AStar(BestFirstSearch):
         """
 
         return ((1 - self.heuristic_weight) * search_node.g_cost) +\
-               (self.heuristic_weight * self.heuristic_function_type.estimate(self,state=search_node.state))
+               (self.heuristic_weight * self.heuristic_function.estimate(state=search_node.state))
 
     def _open_successor_node(self, problem: GraphProblem, successor_node: SearchNode):
         """
@@ -74,33 +74,24 @@ class AStar(BestFirstSearch):
         """
         new_g = successor_node.g_cost + successor_node.operator_cost
         if self.open.has_state(successor_node.state):
-            old_node = successor_node
+            old_node = self.open.get_node_by_state(state=successor_node.state)
             if new_g < old_node.g_cost:
                 old_node.g_cost = new_g
-                old_node.parent_search_node = successor_node
-                old_node.expanding_priority = old_node.g_cost + self.heuristic_function_type.estimate(old_node.state)
-            else:  # state not in open
-                if self.close.has_state(successor_node.state):
-                    old_node = successor_node
-                    if new_g < old_node.g_cost:
-                        old_node.g_cost = new_g
-                        old_node.parent_search_node = successor_node
-                        old_node.expanding_priority = old_node.g_cost + self.heuristic_function_type.estimate(
-                            old_node.state)
-                        self.close.remove_node(old_node)
-                        self.open.push_node(old_node)
-                    # else do nothing
-                else:  # this is a new state - create new node
-                    new_node = SearchNode(successor_node.state, successor_node.parent_search_node, successor_node.cost,
-                                          successor_node.operator_name, successor_node.expanding_priority)
-                    self.open.push_node(new_node)
-
-                    """
-            if self.open.has_state(successor_node.state):
-                already_found_node_with_same_state = self.open.get_node_by_state(successor_node.state)
-            if already_found_node_with_same_state.expanding_priority > successor_node.expanding_priority:
-                self.open.extract_node(already_found_node_with_same_state)
-
-            if not self.open.has_state(successor_node.state):
+                #old_node.parent_search_node = successor_node
+                #old_node.expanding_priority = old_node.g_cost + self.heuristic_function.estimate(old_node.state)
+            else:
+                return
+        else:  # state not in open
+            if self.close.has_state(successor_node.state):
+                old_node = self.close.get_node_by_state(state=successor_node.state)
+                if new_g < old_node.g_cost:
+                    old_node.g_cost = new_g
+                    #old_node.parent_search_node = successor_node
+                    #old_node.expanding_priority = old_node.g_cost + self.heuristic_function.estimate(
+                    #    old_node.state)
+                    self.close.remove_node(old_node)
+                    self.open.push_node(old_node)
+                else:
+                    return
+            else:  # this is a new state - create new node
                 self.open.push_node(successor_node)
-                    """
