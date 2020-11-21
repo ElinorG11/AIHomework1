@@ -51,6 +51,7 @@ class CachedMapDistanceFinder:
         map_problem = MapProblem(self.streets_map, src_junction.index, tgt_junction.index)
         res = self.map_problem_solver.solve_problem(map_problem)
         if res.is_solution_found < 0:
+            self._insert_to_cache((src_junction.index, tgt_junction.index), None)
             return None
         self._insert_to_cache((src_junction.index, tgt_junction.index), res.solution_cost)
-        return res.solution_g_cost
+        return res.solution_cost

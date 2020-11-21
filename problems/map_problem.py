@@ -70,6 +70,7 @@ class MapProblem(GraphProblem):
             opres = OperatorResult(successor_state=MapState(link.target), operator_cost=link.distance)
             if opres is not None:
                 yield opres
+        return None
 
     def is_goal(self, state: GraphProblemState) -> bool:
         """
