@@ -53,4 +53,4 @@ class CachedMapDistanceFinder:
         if res.is_solution_found < 0:
             return None
         self._insert_to_cache((src_junction.index, tgt_junction.index), res.solution_cost)
-        return res.solution_cost
+        return res.solution_g_cost

@@ -139,7 +139,6 @@ def toy_map_problem_experiments():
     #     with `AirDistHeuristic` and `toy_map_problem`.
     toy_map_problem = MapProblem(streets_map, 54, 549)
     run_astar_for_weights_in_range(AirDistHeuristic, toy_map_problem)
-    exit()  # TODO: remove!
 
 
 # --------------------------------------------------------------------
@@ -176,6 +175,9 @@ def basic_mda_problem_experiments():
     # Ex.18
     # TODO: create an instance of `UniformCost`, solve the `small_mda_problem_with_distance_cost`
     #       with it and print the results.
+    uc = UniformCost()
+    res = uc.solve_problem(small_mda_problem_with_distance_cost)
+    print(res)
     exit()  # TODO: remove!
 
 
