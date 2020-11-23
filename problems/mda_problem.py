@@ -78,10 +78,11 @@ class MDAState(GraphProblemState):
         #   (using equals `==` operator) because the class `Junction` explicitly
         #   implements the `__eq__()` method. The types `frozenset`, `ApartmentWithSymptomsReport`, `Laboratory`
         #   are also comparable (in the same manner).
-        return ((self.current_location == other.current_location) and \
-                (self.tests_on_ambulance == other.tests_on_ambulance) and \
-                (self.tests_transferred_to_lab == other.tests_transferred_to_lab) and \
-                (self.nr_matoshim_on_ambulance == other.nr_matoshim_on_ambulance) and \
+        # (self.current_location == other.current_location) and
+        return ((self.current_site == other.current_site) and
+                (self.tests_on_ambulance == other.tests_on_ambulance) and
+                (self.tests_transferred_to_lab == other.tests_transferred_to_lab) and
+                (self.nr_matoshim_on_ambulance == other.nr_matoshim_on_ambulance) and
                 (self.visited_labs == other.visited_labs))
 
     def __hash__(self):
@@ -221,7 +222,6 @@ class MDAProblem(GraphProblem):
         assert isinstance(state_to_expand, MDAState)
 
         apartments = self.get_reported_apartments_waiting_to_visit(state_to_expand)
-        laboratories = self.problem_input.laboratories
         tests_taken = state_to_expand.get_total_nr_tests_taken_and_stored_on_ambulance()
         place_in_fridge = self.problem_input.ambulance.total_fridges_capacity - tests_taken
         # we're going to an apartment which we haven't visited yet
@@ -229,31 +229,29 @@ class MDAProblem(GraphProblem):
             if state_to_expand.nr_matoshim_on_ambulance >= apt.nr_roommates and place_in_fridge >= apt.nr_roommates:
                 succ_tests_taken = (state_to_expand.tests_on_ambulance | frozenset({apt}))
                 succ_nr_matoshim = state_to_expand.nr_matoshim_on_ambulance - apt.nr_roommates
-                succ_state = MDAState(apt.location, succ_tests_taken, state_to_expand.tests_transferred_to_lab,
+                succ_state = MDAState(apt, succ_tests_taken, state_to_expand.tests_transferred_to_lab,
                                       succ_nr_matoshim, state_to_expand.visited_labs)
                 opres = OperatorResult(successor_state=succ_state,
                                        operator_cost=self.get_operator_cost(state_to_expand, succ_state),
                                        operator_name=("visit " + apt.reporter_name))
                 if opres is not None:
                     yield opres
-
+        laboratories = self.problem_input.laboratories
         tests_taken = state_to_expand.get_total_nr_tests_taken_and_stored_on_ambulance()
         # we're going to a lab
         for lab in laboratories:
             not_visited = lab not in state_to_expand.visited_labs
             if tests_taken > 0 or not_visited:
-                succ_tests_taken = frozenset()
+                succ_tests_taken = frozenset([])
                 succ_tests_transferred = (state_to_expand.tests_transferred_to_lab | state_to_expand.tests_on_ambulance)
                 succ_nr_matoshim = state_to_expand.nr_matoshim_on_ambulance + lab.max_nr_matoshim * not_visited
                 succ_visited_labs = (state_to_expand.visited_labs | frozenset({lab}))
-                succ_state = MDAState(lab.location, succ_tests_taken, succ_tests_transferred, succ_nr_matoshim,
+                succ_state = MDAState(lab, succ_tests_taken, succ_tests_transferred, succ_nr_matoshim,
                                       succ_visited_labs)
                 opres = OperatorResult(succ_state, self.get_operator_cost(state_to_expand, succ_state),
                                        "go to " + lab.name)
                 if opres is not None:
                     yield opres
-
-        return None
 
     def get_operator_cost(self, prev_state: MDAState, succ_state: MDAState) -> MDACost:
         """
@@ -285,27 +283,33 @@ class MDAProblem(GraphProblem):
                                 its first `k` items and until the `n`-th item.
             You might find this tip useful for summing a slice of a collection.
         """
-        distance_cost = self.map_distance_finder.get_map_cost_between(prev_state.current_location,
-                                                                      succ_state.current_location)
+        prev_junction = prev_state.current_location
+        succ_junction = succ_state.current_location
+        if isinstance(prev_state, Laboratory) or isinstance(prev_state, ApartmentWithSymptomsReport):
+            prev_junction = prev_state.location
+        if isinstance(succ_state, Laboratory) or isinstance(succ_state, ApartmentWithSymptomsReport):
+            succ_junction = succ_state.location
+        distance_cost = self.map_distance_finder.get_map_cost_between(prev_junction, succ_junction)
 
         if distance_cost is None:
             mda_cost = MDACost(float('inf'), float('inf'), float('inf'), self.optimization_objective)
             return mda_cost
 
         fridge_capacity = self.problem_input.ambulance.total_fridges_capacity
-        active_fridges = math.ceil(prev_state.get_total_nr_tests_taken_and_stored_on_ambulance() / fridge_capacity)
-
+        active_fridges = math.ceil(float(float(prev_state.get_total_nr_tests_taken_and_stored_on_ambulance()) / float(fridge_capacity)))
         fridges_price = sum([fridge * distance_cost * self.problem_input.gas_liter_price for fridge in
-                             list(self.problem_input.ambulance.fridges_gas_consumption_liter_per_meter[:active_fridges])])
+                             list(self.problem_input.ambulance.fridges_gas_consumption_liter_per_meter[:active_fridges-1])])
 
-        monetary_cost = self.problem_input.ambulance.drive_gas_consumption_liter_per_meter * distance_cost + fridges_price
+        monetary_cost = self.problem_input.ambulance.drive_gas_consumption_liter_per_meter * distance_cost * self.problem_input.gas_liter_price + fridges_price
 
-        tests_travel_cost = 0
         lab_cost = 0
-        if isinstance(succ_state.current_location, Laboratory):
-            tests_travel_cost = prev_state.get_total_nr_tests_taken_and_stored_on_ambulance()
-            visited = succ_state.current_location in list(prev_state.visited_labs)
-            lab_cost = tests_travel_cost + visited * prev_state.current_site.revisit_extra_cost
+        if isinstance(succ_state.current_site, Laboratory):
+            taken = prev_state.get_total_nr_tests_taken_and_stored_on_ambulance() != 0
+            lab_cost += taken * succ_state.current_site.tests_transfer_cost
+            visited = succ_state.current_site in list(prev_state.visited_labs)
+            lab_cost += visited * succ_state.current_site.revisit_extra_cost
+
+        tests_travel_cost = prev_state.get_total_nr_tests_taken_and_stored_on_ambulance() * distance_cost
 
         monetary_cost += lab_cost
 
@@ -320,9 +324,8 @@ class MDAProblem(GraphProblem):
          In order to create a set from some other collection (list/tuple) you can just `set(some_other_collection)`.
         """
         assert isinstance(state, MDAState)
-        is_lab = isinstance(state.current_location, Laboratory)
-        visited_all_apts = len(self.get_reported_apartments_waiting_to_visit(state)) == 0
-        return is_lab and visited_all_apts
+
+        return isinstance(state.current_site, Laboratory) and (len(self.get_reported_apartments_waiting_to_visit(state)) == 0)
 
     def get_zero_cost(self) -> Cost:
         """
@@ -369,9 +372,11 @@ class MDAProblem(GraphProblem):
             Use the method `self.get_reported_apartments_waiting_to_visit(state)`.
             Use python's `sorted(some_list, key=...)` function.
         """
-        """
-        apartments_in_path = self.get_reported_apartments_waiting_to_visit(state)
-        junctions_in_path = [apt.location for apt in apartments_in_path]
-        return sorted(junctions_in_path, key=lambda j: j.index, reverse=False)
-        """
-        raise NotImplementedError  # TODO: remove this line!
+        state_junction = None
+        if isinstance(state, Laboratory) or isinstance(state, ApartmentWithSymptomsReport):
+            state_junction = state.location
+        else:
+            state_junction = state.current_location
+        apartments = self.get_reported_apartments_waiting_to_visit(state)
+        junctions = [apt.location for apt in apartments] + [state_junction]
+        return sorted(junctions, key=lambda j: j.index, reverse=False)

@@ -72,23 +72,15 @@ class AStar(BestFirstSearch):
         Remember: In A*, in contrast to uniform-cost, a successor state might have an already closed node,
                   but still could be improved.
         """
-
-        new_g = successor_node.parent_search_node.g_cost + successor_node.operator_cost
-        old_node = self.open.get_node_by_state(successor_node.state)
-        if old_node is not None:
-            if new_g < old_node.cost:
-                old_node.cost = new_g
-                old_node.parent_search_node = successor_node.parent_search_node
-                old_node.expanding_priority = old_node.g_cost + self.heuristic_function.estimate(old_node.state)
-        else:
-            old_node = self.close.get_node_by_state(successor_node.state)
-            if old_node is not None:
-                if new_g < old_node.cost:
-                    old_node.cost = new_g
-                    old_node.parent_search_node = successor_node.parent_search_node
-                    old_node.expanding_priority = old_node.g_cost + self.heuristic_function.estimate(old_node.state)
-                    self.close.remove_node(old_node)
-                    self.open.push_node(old_node)
-            else:  # new state
+        if self.close.has_state(successor_node.state):
+            already_found_node_with_same_state = self.close.get_node_by_state(successor_node.state)
+            if already_found_node_with_same_state.g_cost > successor_node.g_cost:
+                self.close.remove_node(already_found_node_with_same_state)
                 self.open.push_node(successor_node)
-        return None
+        elif self.open.has_state(successor_node.state):
+            already_found_node_with_same_state = self.open.get_node_by_state(successor_node.state)
+            if already_found_node_with_same_state.g_cost > successor_node.g_cost:
+                self.open.extract_node(already_found_node_with_same_state)
+                self.open.push_node(successor_node)
+        else:  # new state
+            self.open.push_node(successor_node)
