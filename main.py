@@ -221,7 +221,7 @@ def mda_problem_with_weighted_astar_experiments():
     # TODO: Call here the function `run_astar_for_weights_in_range()`
     #       with `MDAMSTAirDistHeuristic`
     #       over the `small_mda_problem_with_distance_cost`.
-    #run_astar_for_weights_in_range(MDAMSTAirDistHeuristic, small_mda_problem_with_distance_cost)
+    run_astar_for_weights_in_range(MDAMSTAirDistHeuristic, small_mda_problem_with_distance_cost)
 
     # Ex.30
     # TODO: Call here the function `run_astar_for_weights_in_range()`
@@ -290,10 +290,6 @@ def multiple_objectives_mda_problem_experiments():
 
     a_star_2 = AStar(heuristic_function_type=MDATestsTravelDistToNearestLabHeuristic,open_criterion=(lambda node: node.cost.distance_cost <= max_distance_cost))
     a_star_2.solve_problem(moderate_mda_problem_with_tests_travel_dist_cost)
-
-
-
-    exit()  # TODO: remove!
 
 
 def mda_problem_with_astar_epsilon_experiments():
