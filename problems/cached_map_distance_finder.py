@@ -55,5 +55,6 @@ class CachedMapDistanceFinder:
             self._insert_to_cache(key=(src_junction.index, tgt_junction.index), val=None)
             return None
 
+        res_cost = res.solution_cost
         self._insert_to_cache(key=(src_junction.index, tgt_junction.index), val=res.solution_cost)
-        return res.solution_cost
+        return res_cost

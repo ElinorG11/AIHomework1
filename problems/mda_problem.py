@@ -295,23 +295,20 @@ class MDAProblem(GraphProblem):
             mda_cost = MDACost(float('inf'), float('inf'), float('inf'), self.optimization_objective)
             return mda_cost
 
-        fridge_capacity = self.problem_input.ambulance.total_fridges_capacity
+        fridge_capacity = self.problem_input.ambulance.fridge_capacity
         active_fridges = math.ceil(float(float(prev_state.get_total_nr_tests_taken_and_stored_on_ambulance()) / float(fridge_capacity)))
-        fridges_price = sum([fridge * distance_cost * self.problem_input.gas_liter_price for fridge in
-                             list(self.problem_input.ambulance.fridges_gas_consumption_liter_per_meter[:active_fridges-1])])
+        fridge_gas_consumption = sum(self.problem_input.ambulance.fridges_gas_consumption_liter_per_meter[:active_fridges])
 
-        monetary_cost = self.problem_input.ambulance.drive_gas_consumption_liter_per_meter * distance_cost * self.problem_input.gas_liter_price + fridges_price
+        monetary_cost = (self.problem_input.ambulance.drive_gas_consumption_liter_per_meter + fridge_gas_consumption) * distance_cost * self.problem_input.gas_liter_price
 
-        lab_cost = 0
         if isinstance(succ_state.current_site, Laboratory):
             taken = prev_state.get_total_nr_tests_taken_and_stored_on_ambulance() != 0
-            lab_cost += taken * succ_state.current_site.tests_transfer_cost
+            lab_cost = taken * succ_state.current_site.tests_transfer_cost
             visited = succ_state.current_site in list(prev_state.visited_labs)
             lab_cost += visited * succ_state.current_site.revisit_extra_cost
+            monetary_cost += lab_cost
 
         tests_travel_cost = prev_state.get_total_nr_tests_taken_and_stored_on_ambulance() * distance_cost
-
-        monetary_cost += lab_cost
 
         mda_cost = MDACost(distance_cost, monetary_cost, tests_travel_cost, self.optimization_objective)
         return mda_cost
