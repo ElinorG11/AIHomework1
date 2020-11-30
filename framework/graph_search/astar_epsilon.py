@@ -77,13 +77,13 @@ class AStarEpsilon(AStar):
             minimal_node = self.open.peek_next_node()
             max_focal = (1 + self.focal_epsilon) * minimal_node.expanding_priority
             focal_list = []
-            while self.open and (self.max_focal_size is None or len(focal_list) < self.max_focal_size):
+            itr_counter = len(self.open)
+            while itr_counter > 0 and (self.max_focal_size is None or len(focal_list) < self.max_focal_size):
+                itr_counter -= 1
                 current_node = self.open.peek_next_node()
                 if current_node.expanding_priority <= max_focal:
                     node_to_focal = self.open.pop_next_node()
                     focal_list.append(node_to_focal)
-                else:
-                    break
             best_nodes = [focal_func(node, problem, self) for node in focal_list]
             index = np.argmin(best_nodes)
             node_to_return = focal_list[index]
